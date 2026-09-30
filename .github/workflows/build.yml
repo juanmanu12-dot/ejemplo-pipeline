@@ -2,9 +2,11 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   docker:
@@ -26,18 +28,19 @@ jobs:
 
       - name: Extract short SHA
         id: vars
+        shell: bash
         run: echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
-- name: Build image
-  run: |
-    docker build \
-      -t ${{ secrets.DOCKER_USERNAME }}/mi-imagen:${{ env.SHA }} \
-      .
+      - name: Build Docker image
+        run: |
+          docker build \
+            --file ./Dockerfile \
+            --tag "${{ secrets.DOCKER_USER }}/${{ env.IMAGE }}:${{ steps.vars.outputs.sha_short }}" \
+            --tag "${{ secrets.DOCKER_USER }}/${{ env.IMAGE }}:latest" \
+            .
 
-      # Los pull requests solo construyen la imagen; no publican :latest
-      - name: Push image
+      - name: Push Docker image
         if: github.event_name == 'push'
         run: |
-          docker push ${{ secrets.DOCKER_USER }}/${{ env.IMAGE }}:${{ steps.vars.outputs.sha_short }}
-          docker push ${{ secrets.DOCKER_USER }}/${{ env.IMAGE }}:latest
-
+          docker push "${{ secrets.DOCKER_USER }}/${{ env.IMAGE }}:${{ steps.vars.outputs.sha_short }}"
+          docker push "${{ secrets.DOCKER_USER }}/${{ env.IMAGE }}:latest"
