@@ -1,0 +1,38 @@
+name: Build and Push Docker Image
+on:
+ push:
+ branches: [main]
+ pull_request:
+ branches: [main]
+jobs:
+ docker:
+ runs-on: ubuntu-latest
+ env:
+ IMAGE: catnip
+ steps:
+ - name: Checkout repository
+ uses: actions/checkout@v4
+ - name: Log in to Docker Hub
+ if: github.event_name == 'push'
+ uses: docker/login-action@v3
+ with:
+ username: ${{ secrets.DOCKER_USER }}
+ password: ${{ secrets.DOCKER_PASSWORD }}
+ - name: Extract short SHA
+ id: vars
+ run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+ - name: Build image
+ run: |
+ docker build \
+ -f ./Dockerfile \
+ -t ${{ secrets.DOCKER_USER }}/${{ env.IMAGE }}:${{ steps.vars.outputs.sha_short
+}} \
+ -t ${{ secrets.DOCKER_USER }}/${{ env.IMAGE }}:latest \
+ .
+ # los pull requests solo construyen la imagen; no publican :latest
+ - name: Push image
+ if: github.event_name == 'push'
+ run: |
+ docker push ${{ secrets.DOCKER_USER }}/${{ env.IMAGE }}:${{
+steps.vars.outputs.sha_short }}
+ docker push ${{ secrets.DOCKER_USER }}/${{ env.IMAGE }}:latest
